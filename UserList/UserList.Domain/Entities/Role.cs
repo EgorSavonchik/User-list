@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace UserList.Domain.Entities
@@ -9,6 +10,9 @@ namespace UserList.Domain.Entities
     public class Role
     {
         public int Id { get; set; }
-        public int Name { get; set;}
+        public string Name { get; set;}
+
+        [JsonIgnore]
+        public ICollection<User> Users { get; set; } = new List<User>();
     }
 }
