@@ -10,7 +10,7 @@ using UserList.API.Data;
 namespace UserList.API.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20231006155833_initial_migrate")]
+    [Migration("20231008161530_initial_migrate")]
     partial class initial_migrate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -62,6 +62,7 @@ namespace UserList.API.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");

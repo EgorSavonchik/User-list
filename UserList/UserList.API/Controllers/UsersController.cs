@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using UserList.API.Data;
+using UserList.API.DTO;
 using UserList.API.Services.RoleService;
 using UserList.API.Services.UserService;
 using UserList.API.Util.Validators;
@@ -20,31 +21,30 @@ namespace UserList.API.Controllers
     {
         private IUserService _userService;
         private IRoleService _roleService;
-        private UserValidator _userValidator;
 
-        public UsersController(IUserService userService, IRoleService roleService, UserValidator userValidator)
+        public UsersController(IUserService userService, IRoleService roleService)
         {
             _userService = userService;
             _roleService = roleService;
-            _userValidator = userValidator;
         }
 
         // GET: api/Users
-        [HttpGet]
-        public async Task<ActionResult<ResponseData<ListModel<User>>>> GetUsers(int pageNo = 1, int pageSize = 10)
+        [HttpGet("", Name = "GetUsersFirstPage")]
+        [HttpGet("page{pageNo:int}", Name = "GetUsersPerPage")]
+        public async Task<ActionResult<ResponseData<ListModel<User>>>> GetUsers([FromQuery] UserFilterParameters parameters, int pageNo = 1, int pageSize = 10)
         {
-            return Ok(await _userService.GetUserListAsync(pageNo, pageSize));
+            return Ok(await _userService.GetUserListAsync(pageNo, pageSize, parameters));
         }
 
         // GET: api/Users/5
-        [HttpGet("{id}")]
+        [HttpGet("{id:int}")]
         public async Task<ActionResult<User>> GetUser(int id)
         {
             var user = await _userService.GetUserByIdAsync(id);
 
             if (user.Data == null)
             {
-                return NotFound(id); // спросить, стоит ли так возращать или только NotFound()
+                return NotFound(user.ErrorMessage); 
             }
 
             return Ok(user);
@@ -52,12 +52,18 @@ namespace UserList.API.Controllers
 
         // PUT: api/Users/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         public async Task<IActionResult> PutUser(int id, User user)
         {
-            if (!(await _userValidator.Validate(user)))
+            // Добавлять отдельно проверку на нал не стоит, тк пустой пользователь и не пройдет валидацию
+            if (!ModelState.IsValid)
             {
-                return BadRequest();
+                var errors = ModelState.Values
+                                      .SelectMany(v => v.Errors)
+                                      .Select(e => e.ErrorMessage)
+                                      .ToList();
+
+                return BadRequest(errors);
             }
 
             if (!(await _userService.DoesUserExistAsync(id)))
@@ -74,19 +80,29 @@ namespace UserList.API.Controllers
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(User user)
-        {
-            if(!(await _userValidator.Validate(user)))
+        {  
+            if (!ModelState.IsValid)
             {
-                return BadRequest();
+                var errors = ModelState.Values
+                                      .SelectMany(v => v.Errors)
+                                      .Select(e => e.ErrorMessage)
+                                      .ToList();
+
+                return BadRequest(errors);
             }
 
-            await _userService.CreateUserAsync(user);
+            var res = await _userService.CreateUserAsync(user);
 
-            return CreatedAtAction("GetUser", new { id = user.Id }, user);
+            if(!res.Success)
+            {
+                return BadRequest(res.ErrorMessage);
+            }
+
+            return CreatedAtAction("GetUser", new { id = res.Data.Id }, res.Data);
         }
 
         // DELETE: api/Users/5
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public async Task<IActionResult> DeleteUser(int id)
         {
             if (!(await _userService.DoesUserExistAsync(id)))
@@ -99,9 +115,9 @@ namespace UserList.API.Controllers
             return Ok("Пользователь с id = " + id + " успешно удален");
         }
 
-        // PUT: api/Users/5
+        // PUT: api/users/add-role/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("add-role/{id}")]
+        [HttpPut("add-role/{id:int}")]
         public async Task<ActionResult> AddRole(int id, Role role)
         {
             if(!(await _userService.DoesUserExistAsync(id)))

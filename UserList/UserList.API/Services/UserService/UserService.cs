@@ -1,7 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json.Linq;
 using System.Data;
+using System.Globalization;
+using System.Reflection;
 using UserList.API.Data;
+using UserList.API.DTO;
+using UserList.API.Util.Validators;
 using UserList.Domain.Entities;
 using UserList.Domain.Models;
 
@@ -11,16 +17,38 @@ namespace UserList.API.Services.UserService
     {
         private readonly int _maxPageSize;
         private readonly AppDbContext _context;
+        private UserValidator _userValidator;
 
 
-        public UserService(AppDbContext appDbContext, IConfiguration configuration)
+        public UserService(AppDbContext appDbContext, IConfiguration configuration, UserValidator userValidator)
         {
             _context = appDbContext;
             _maxPageSize = Convert.ToInt32(configuration.GetSection("ItemsPerPage").Value);
+            _userValidator = userValidator;
         }
 
-        public async Task<ResponseData<User>> CreateUserAsync(User user) // добавить валидацию
+        public async Task<ResponseData<User>> CreateUserAsync(User user) 
         {
+            var valResponse = _userValidator.Validate(user);
+
+            if (!valResponse.Success) 
+            {
+                return new ResponseData<User>
+                {
+                    Success = false,
+                    ErrorMessage = valResponse.ErrorMessage
+                };
+            }
+
+            if (!(await IsEmailUnique(user.Email)))
+            {
+                return new ResponseData<User>
+                {
+                    Success = false,
+                    ErrorMessage = "A user with this email already exists"
+                };
+            }
+
 
             var roles = user.Roles.ToList();
             user.Roles.Clear();
@@ -41,7 +69,7 @@ namespace UserList.API.Services.UserService
             };
         }
 
-        public async Task DeleteUserAsync(int id) // млжет быть переделать чтобы возращало бул
+        public async Task DeleteUserAsync(int id)
         {
             User? user = await _context.Users.FindAsync(id);
 
@@ -73,19 +101,19 @@ namespace UserList.API.Services.UserService
             };
         }
 
-        public async Task<ResponseData<ListModel<User>>> GetUserListAsync(int pageNo = 1, int pageSize = 10)
+        public async Task<ResponseData<ListModel<User>>> GetUserListAsync(int pageNo = 1, int pageSize = 10, UserFilterParameters? parameters = null)
         {
             if (pageSize > _maxPageSize)
             {
                 pageSize = _maxPageSize;
             }
 
-            var query = _context.Users.AsQueryable().Include(u => u.Roles);
+            var query = _context.Users.AsQueryable();
             var dataList = new ListModel<User>();
 
             // количество элементов в списке
             var count = query.Count();
-            if (count == 0)
+            if (query.Count() == 0)
             {
                 return new ResponseData<ListModel<User>>
                 {
@@ -95,7 +123,7 @@ namespace UserList.API.Services.UserService
 
             // количество страниц
             int totalPages = (int)Math.Ceiling(count / (double)pageSize);
-            if (pageNo > totalPages)
+            if (pageNo > totalPages || pageNo <= 0)
             {
                 return new ResponseData<ListModel<User>>
                 {
@@ -105,7 +133,103 @@ namespace UserList.API.Services.UserService
                 };
             }
 
-            dataList.Items = await query.Skip((pageNo - 1) * pageSize).Take(pageSize).ToListAsync();
+            // фильтрация
+            if (parameters != null &&  parameters.FilterBy != null && parameters.FilterValue != null)
+            {
+                var property = typeof(User).GetProperty(parameters.FilterBy);
+
+                if (property == null)
+                {
+                    return new ResponseData<ListModel<User>>
+                    {
+                        Data = null,
+                        Success = false,
+                        ErrorMessage = "Incorrect filter field"
+                    };
+                }
+
+                query = query
+                    .Where(user => EF.Property<string>(user, parameters.FilterBy) != null
+                                && EF.Property<string>(user, parameters.FilterBy) == parameters.FilterValue).AsQueryable();
+
+                //если после выборки остался пустой список
+                totalPages = (int)Math.Ceiling(query.Count() / (double)pageSize);
+                if (totalPages == 0)
+                {
+                    return new ResponseData<ListModel<User>>
+                    {
+                        Data = dataList
+                    };
+                }
+
+            }
+
+            // сортировка
+            if (parameters != null && parameters.SortBy != null)
+            {
+                PropertyInfo property = typeof(User).GetProperty(parameters.SortBy);
+
+                if (property == null)
+                {
+                    return new ResponseData<ListModel<User>>
+                    {
+                        Data = null,
+                        Success = false,
+                        ErrorMessage = "Incorrect sorted field"
+                    };
+                }
+
+                if (parameters.Ascending)
+                {
+                    query =  query.OrderBy(u => EF.Property<string>(u, parameters.SortBy)).AsQueryable();
+                }
+                else
+                {
+                    query = query.OrderByDescending(u => EF.Property<string>(u, parameters.SortBy)).AsQueryable();
+                }
+            }
+
+            //выборка по ролям
+            if(parameters != null && (parameters.RoleId != null|| parameters.RoleName != null)) 
+            {
+                if(parameters.RoleId != null && parameters.RoleName != null) 
+                {
+                    if(_context.Roles.Where(r => r.Id == parameters.RoleId).First().Name != parameters.RoleName)
+                    {
+                        return new ResponseData<ListModel<User>>
+                        {
+                            Success = false,
+                            ErrorMessage = "Incorrect role parameter"
+                        };
+                    }
+                }
+
+                query = query.Include(u => u.Roles).AsQueryable();
+
+                if (parameters.RoleId != null)
+                {
+                    query = query.Include(u => u.Roles)
+                        .Where(u => u.Roles.Any(r => r.Id == parameters.RoleId))
+                        .AsQueryable();
+                }
+                else if(parameters.RoleName != null) 
+                {
+                    query = query.Include(u => u.Roles)
+                        .Where(u => u.Roles.Any(r => r.Name == parameters.RoleName))
+                        .AsQueryable();
+                }
+            }
+
+            // чтобы избежать избыточной загрузки ролей через Include
+            if (parameters != null && (parameters.RoleId != null || parameters.RoleName != null))
+            {
+                dataList.Items = await query.Skip((pageNo - 1) * pageSize).Take(pageSize).ToListAsync();
+            }
+            else
+            {
+                dataList.Items = await query.Skip((pageNo - 1) * pageSize).Take(pageSize).Include(u => u.Roles).ToListAsync();
+            }
+
             dataList.CurrentPage = pageNo;
             dataList.TotalPages = totalPages;
 
@@ -117,13 +241,33 @@ namespace UserList.API.Services.UserService
             return response;
         }
 
-        public async Task UpdateUserAsync(int id, User user)
+        public async Task<ResponseData<User>> UpdateUserAsync(int id, User user)
         {
+            var valResponse = _userValidator.Validate(user);
+
+            if (!valResponse.Success)
+            {
+                return new ResponseData<User>
+                {
+                    Success = false,
+                    ErrorMessage = valResponse.ErrorMessage
+                };
+            }
+
             var existingUser = await _context.Users.FindAsync(id);
             user.Id = id;
 
             if (existingUser != null)
             {
+                if (!(await IsEmailUnique(user.Email)) && user.Email == existingUser.Email)
+                {
+                    return new ResponseData<User>
+                    {
+                        Success = false,
+                        ErrorMessage = "A user with this email already exists"
+                    };
+                }
+
                 _context.Entry(existingUser).Collection(u => u.Roles).Load();
                 _context.Entry(existingUser).CurrentValues.SetValues(user);
 
@@ -141,6 +285,12 @@ namespace UserList.API.Services.UserService
 
                 await _context.SaveChangesAsync();
             }
+
+            return new ResponseData<User>
+            {
+                Data = user,
+                Success = true
+            };
         }
 
         public async Task AddRoleAsync(int id, Role role)

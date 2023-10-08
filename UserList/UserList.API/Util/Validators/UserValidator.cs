@@ -1,39 +1,56 @@
-﻿using UserList.API.Services.UserService;
+﻿using Microsoft.Extensions.FileSystemGlobbing.Internal;
+using System.Text.RegularExpressions;
+using UserList.API.Services.UserService;
 using UserList.Domain.Entities;
 
 namespace UserList.API.Util.Validators
 {
     public class UserValidator
     {
-        IUserService _userService;
-        public UserValidator(IUserService userService) 
-        {
-            _userService = userService;
-        }
+        private readonly string emailFormatRegex = @"^[\w-]+@[\w-]+\.{1}[a-zA-Z]+$";
 
-        public async Task<bool> Validate(User? user)
+        public UserValidatorResponse Validate(User? user)
         {
             if(user == null)
             {
-                return false;
+                return new UserValidatorResponse
+                {
+                    Success = false,
+                    ErrorMessage = "User is null"
+                };
             }
 
-            if(user.Email != null && user.Age != null && user.Name != null) 
+            if(user.Email == null || user.Age == null || user.Name == null) 
             {
-                return false;
+                return new UserValidatorResponse
+                {
+                    Success = false,
+                    ErrorMessage = "One or more required fields are empty"
+                };
+            }
+
+            if(!Regex.IsMatch(user.Email, emailFormatRegex))
+            {
+                return new UserValidatorResponse
+                {
+                    Success = false,
+                    ErrorMessage = "Incorrect email format"
+                };
             }
 
             if(user.Age < 0)
             {
-                return false;
+                return new UserValidatorResponse
+                {
+                    Success = false,
+                    ErrorMessage = "Age is not a positive number"
+                };
             }
 
-            if(!(await _userService.IsEmailUnique(user.Email))) 
-            { 
-                return false;
-            }
-
-            return true;
+            return new UserValidatorResponse
+            {
+                Success = true
+            };
         }
     }
 }

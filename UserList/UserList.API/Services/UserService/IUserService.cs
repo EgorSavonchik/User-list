@@ -1,4 +1,5 @@
-﻿using UserList.Domain.Entities;
+﻿using UserList.API.DTO;
+using UserList.Domain.Entities;
 using UserList.Domain.Models;
 
 namespace UserList.API.Services.UserService
@@ -11,7 +12,7 @@ namespace UserList.API.Services.UserService
         /// <param name="pageNo">номер страницы списка</param>
         /// <param name="pageSize">количество объектов на странице</param>
         /// <returns></returns>
-        public Task<ResponseData<ListModel<User>>> GetUserListAsync(int pageNo = 1, int pageSize = 10);
+        public Task<ResponseData<ListModel<User>>> GetUserListAsync(int pageNo = 1, int pageSize = 10, UserFilterParameters? parameters = null);
 
         /// <summary>
         /// Поиск объекта по Id
@@ -26,7 +27,7 @@ namespace UserList.API.Services.UserService
         /// <param name="id">Id изменяемомго объекта</param>
         /// <param name="user">объект с новыми параметрами</param>
         /// <returns></returns>
-        public Task UpdateUserAsync(int id, User user);
+        public Task<ResponseData<User>> UpdateUserAsync(int id, User user);
 
         /// <summary>
         /// Удаление объекта
