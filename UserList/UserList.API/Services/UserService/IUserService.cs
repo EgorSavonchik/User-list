@@ -64,5 +64,12 @@ namespace UserList.API.Services.UserService
         /// <param name="email">Проверяемый email</param>
         /// <returns>True если в базе данных нету пользователей с таким же значением поля email, false если есть</returns>
         public Task<bool> IsEmailUnique(string email);
+
+        /// <summary>
+        /// получение пользователя по полю email
+        /// </summary>
+        /// <param name="email">email пользователя</param>
+        /// <returns>Возращает пользователя с заданным email</returns>
+        public Task<User?> GetUserByEmail(string email);
     }
 }

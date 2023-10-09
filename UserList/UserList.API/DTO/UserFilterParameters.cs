@@ -5,7 +5,7 @@
         public string? SortBy { get; set; }
 
         // по умолчанию сортировка по возрастанию
-        public bool Ascending { get; set; } = true;
+        public bool? Ascending { get; set; } 
 
         public string? FilterBy { get; set; }
 

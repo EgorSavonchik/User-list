@@ -23,6 +23,10 @@ namespace UserList.Domain.Entities
         [EmailAddress]
         public string Email { get; set; }
 
+        [Required]
+        public string Password { get; set; }
+
+
         public ICollection<Role> Roles { get; set; } = new List<Role>();
     }
 }

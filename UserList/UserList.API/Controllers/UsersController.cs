@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using UserList.API.Data;
 using UserList.API.DTO;
 using UserList.API.Services.RoleService;
@@ -17,15 +19,19 @@ namespace UserList.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class UsersController : ControllerBase
     {
-        private IUserService _userService;
-        private IRoleService _roleService;
+        private readonly IUserService _userService;
+        private readonly IRoleService _roleService;
+        private readonly ILogger<UsersController> _logger;
 
-        public UsersController(IUserService userService, IRoleService roleService)
+        public UsersController(IUserService userService, IRoleService roleService, ILogger<UsersController> logger)
         {
             _userService = userService;
             _roleService = roleService;
+            _logger = logger;
+            _logger.LogInformation("Logger create");
         }
 
         // GET: api/Users
@@ -33,13 +39,26 @@ namespace UserList.API.Controllers
         [HttpGet("page{pageNo:int}", Name = "GetUsersPerPage")]
         public async Task<ActionResult<ResponseData<ListModel<User>>>> GetUsers([FromQuery] UserFilterParameters parameters, int pageNo = 1, int pageSize = 10)
         {
-            return Ok(await _userService.GetUserListAsync(pageNo, pageSize, parameters));
+            _logger.LogInformation("Method 'GetUsers' called with parameters: {@Parameters}, PageNo: {PageNo}, PageSize: {PageSize}", 
+                parameters, pageNo, pageSize);
+            var res = await _userService.GetUserListAsync(pageNo, pageSize, parameters);
+
+            if(!res.Success)
+            {
+                _logger.LogWarning("The method failed : {ErrorMessage}", res.ErrorMessage);
+                return BadRequest(res.ErrorMessage);
+            }
+
+            _logger.LogInformation("Method 'GetUsers' returned page with totalPages : {TotalPages}, currentPages : {CurentPages}", 
+                res.Data.TotalPages, res.Data.CurrentPage);
+            return Ok(res);
         }
 
         // GET: api/Users/5
         [HttpGet("{id:int}")]
         public async Task<ActionResult<User>> GetUser(int id)
         {
+            
             var user = await _userService.GetUserByIdAsync(id);
 
             if (user.Data == null)
@@ -47,6 +66,7 @@ namespace UserList.API.Controllers
                 return NotFound(user.ErrorMessage); 
             }
 
+            _logger.LogInformation($"User [{id}]");
             return Ok(user);
         }
 
@@ -71,7 +91,12 @@ namespace UserList.API.Controllers
                 return BadRequest();
             }
 
-            await _userService.UpdateUserAsync(id, user);
+            var res = await _userService.UpdateUserAsync(id, user);
+
+            if(!res.Success)
+            {
+                return BadRequest(res.ErrorMessage);
+            }
 
             return NoContent();
         }

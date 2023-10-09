@@ -7,6 +7,7 @@ using System.Globalization;
 using System.Reflection;
 using UserList.API.Data;
 using UserList.API.DTO;
+using UserList.API.Util.Encoder;
 using UserList.API.Util.Validators;
 using UserList.Domain.Entities;
 using UserList.Domain.Models;
@@ -18,13 +19,15 @@ namespace UserList.API.Services.UserService
         private readonly int _maxPageSize;
         private readonly AppDbContext _context;
         private UserValidator _userValidator;
+        private IPasswordHasher _passwordHasher;
 
 
-        public UserService(AppDbContext appDbContext, IConfiguration configuration, UserValidator userValidator)
+        public UserService(AppDbContext appDbContext, IConfiguration configuration, UserValidator userValidator, IPasswordHasher passwordHasher)
         {
             _context = appDbContext;
             _maxPageSize = Convert.ToInt32(configuration.GetSection("ItemsPerPage").Value);
             _userValidator = userValidator;
+            _passwordHasher = passwordHasher;
         }
 
         public async Task<ResponseData<User>> CreateUserAsync(User user) 
@@ -58,6 +61,7 @@ namespace UserList.API.Services.UserService
                 user.Roles.Add(_context.Roles.Find(role.Id));
             };
 
+            user.Password = _passwordHasher.HashPassword(user.Password);
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
@@ -138,7 +142,7 @@ namespace UserList.API.Services.UserService
             {
                 var property = typeof(User).GetProperty(parameters.FilterBy);
 
-                if (property == null)
+                if (property == null || property.Name == "Roles")
                 {
                     return new ResponseData<ListModel<User>>
                     {
@@ -179,13 +183,32 @@ namespace UserList.API.Services.UserService
                     };
                 }
 
-                if (parameters.Ascending)
+
+                if (parameters.Ascending != null ? parameters.Ascending : true)
                 {
-                    query =  query.OrderBy(u => EF.Property<string>(u, parameters.SortBy)).AsQueryable();
+                    if (property.Name == "Roles")
+                    {
+                        query = query.Include(u => u.Roles)
+                            .OrderBy(user => user.Roles.Max(role => role.Id))
+                            .AsQueryable();
+                    }
+                    else
+                    {
+                        query =  query.OrderBy(u => EF.Property<string>(u, parameters.SortBy)).AsQueryable();
+                    }
                 }
                 else
                 {
-                    query = query.OrderByDescending(u => EF.Property<string>(u, parameters.SortBy)).AsQueryable();
+                    if (property.Name == "Roles")
+                    {
+                        query = query.Include(u => u.Roles)
+                            .OrderByDescending(user => user.Roles.Max(role => role.Id))
+                            .AsQueryable();
+                    }
+                    else
+                    {
+                        query = query.OrderByDescending(u => EF.Property<string>(u, parameters.SortBy)).AsQueryable();
+                    }
                 }
             }
 
@@ -221,7 +244,7 @@ namespace UserList.API.Services.UserService
             }
 
             // чтобы избежать избыточной загрузки ролей через Include
-            if (parameters != null && (parameters.RoleId != null || parameters.RoleName != null))
+            if (parameters != null && (parameters.RoleId != null || parameters.RoleName != null || parameters.SortBy == "Roles"))
             {
                 dataList.Items = await query.Skip((pageNo - 1) * pageSize).Take(pageSize).ToListAsync();
             }
@@ -259,7 +282,7 @@ namespace UserList.API.Services.UserService
 
             if (existingUser != null)
             {
-                if (!(await IsEmailUnique(user.Email)) && user.Email == existingUser.Email)
+                if (!(await IsEmailUnique(user.Email)) && user.Email != existingUser.Email)
                 {
                     return new ResponseData<User>
                     {
@@ -267,6 +290,8 @@ namespace UserList.API.Services.UserService
                         ErrorMessage = "A user with this email already exists"
                     };
                 }
+
+                user.Password = _passwordHasher.HashPassword(user.Password);
 
                 _context.Entry(existingUser).Collection(u => u.Roles).Load();
                 _context.Entry(existingUser).CurrentValues.SetValues(user);
@@ -309,6 +334,11 @@ namespace UserList.API.Services.UserService
                     await _context.SaveChangesAsync();
                 }
             }
+        }
+
+        public async Task<User?> GetUserByEmail(string email)
+        {
+            return _context.Users.FirstOrDefault(u => u.Email == email);
         }
 
         public async Task<bool> DoesUserExistAsync(int userId)
