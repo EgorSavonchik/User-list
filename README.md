@@ -50,4 +50,4 @@
   + string:password - пароль пользователя.
 * POST /api/aith/register - регистрация пользователя, принимает объект User в формате json, создает пользователя в базе данных и возвращает токен, разрешающий доступ к операциям с пользователями.
 # Postman
-Также есть [коллекция postman](https://github.com/EgorSavonchik/User-list/blob/main/UserList/UserList.API/Postman/User%20List.postman_collection.json) с готовыми запросами 
+Также есть [коллекция postman](https://github.com/EgorSavonchik/User-list/blob/main/UserList/Postman/User%20List.postman_collection.json) с готовыми запросами 
