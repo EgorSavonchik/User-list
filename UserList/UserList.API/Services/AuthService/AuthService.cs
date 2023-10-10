@@ -12,9 +12,9 @@ namespace UserList.API.Services.AuthService
 {
     public class AuthService : IAuthService
     {
-        IConfiguration _configuration;
-        IUserService _userService;
-        IPasswordHasher _passwordHasher;
+        private readonly IConfiguration _configuration;
+        private readonly IUserService _userService;
+        private readonly IPasswordHasher _passwordHasher;
 
         public AuthService(IConfiguration configuration, IUserService userService, IPasswordHasher passwordHasher)
         {
