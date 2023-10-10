@@ -1,9 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Newtonsoft.Json.Linq;
+﻿using Microsoft.EntityFrameworkCore;
 using System.Data;
-using System.Globalization;
 using System.Reflection;
 using UserList.API.Data;
 using UserList.API.DTO;
@@ -51,7 +47,6 @@ namespace UserList.API.Services.UserService
                     ErrorMessage = "A user with this email already exists"
                 };
             }
-
 
             var roles = user.Roles.ToList();
             user.Roles.Clear();
@@ -165,13 +160,12 @@ namespace UserList.API.Services.UserService
                         Data = dataList
                     };
                 }
-
             }
 
             // сортировка
             if (parameters != null && parameters.SortBy != null)
             {
-                PropertyInfo property = typeof(User).GetProperty(parameters.SortBy);
+                PropertyInfo? property = typeof(User).GetProperty(parameters.SortBy);
 
                 if (property == null)
                 {
@@ -183,8 +177,7 @@ namespace UserList.API.Services.UserService
                     };
                 }
 
-
-                if (parameters.Ascending != null ? parameters.Ascending : true)
+                if (parameters.Ascending != null ? parameters.Ascending.Value : true)
                 {
                     if (property.Name == "Roles")
                     {
@@ -338,7 +331,7 @@ namespace UserList.API.Services.UserService
 
         public async Task<User?> GetUserByEmail(string email)
         {
-            return _context.Users.FirstOrDefault(u => u.Email == email);
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
         }
 
         public async Task<bool> DoesUserExistAsync(int userId)
