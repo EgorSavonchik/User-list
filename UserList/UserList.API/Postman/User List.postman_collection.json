@@ -1,0 +1,150 @@
+{
+	"info": {
+		"_postman_id": "03c69fd4-7299-4f0f-b75d-0a36a22a7406",
+		"name": "User List",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "27612701"
+	},
+	"item": [
+		{
+			"name": "Auth",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "https://localhost:7002/api/auth/login?email=string@gmail.com&password=12345678",
+							"protocol": "https",
+							"host": [
+								"localhost"
+							],
+							"port": "7002",
+							"path": [
+								"api",
+								"auth",
+								"login"
+							],
+							"query": [
+								{
+									"key": "email",
+									"value": "string@gmail.com"
+								},
+								{
+									"key": "password",
+									"value": "12345678"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Registration",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Egor\",\r\n  \"age\": 20,\r\n  \"email\": \"string@gmail.com\",\r\n  \"password\": \"12345678\",\r\n  \"roles\": [\r\n    {\r\n      \"id\": 2,\r\n      \"name\": \"Admin\"\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "https://localhost:7002/api/auth/register"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get all users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "https://localhost:7002/api/users"
+					},
+					"response": []
+				},
+				{
+					"name": "Ger user by id",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "https://localhost:7002/api/users/1"
+					},
+					"response": []
+				},
+				{
+					"name": "Create user",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Egor\",\r\n  \"age\": 19,\r\n  \"email\": \"string@gmail.com\",\r\n  \"roles\": [\r\n    {\r\n      \"id\": 1,\r\n      \"name\": \"User\"\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "https://localhost:7002/api/users"
+					},
+					"response": []
+				},
+				{
+					"name": "Update user",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"name\": \"Egor\",\r\n  \"age\": 20,\r\n  \"email\": \"string@gmail.com\",\r\n  \"roles\": [\r\n    {\r\n      \"id\": 1,\r\n      \"name\": \"User\"\r\n    }\r\n  ]\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "https://localhost:7002/api/users/1"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete user",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": "https://localhost:7002/api/users/1"
+					},
+					"response": []
+				},
+				{
+					"name": "Add role by id",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"id\": 4,\r\n    \"name\": \"SuperAdmin\"\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "https://localhost:7002/api/users/add-role/1"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

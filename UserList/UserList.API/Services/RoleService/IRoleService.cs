@@ -3,10 +3,10 @@
     public interface IRoleService
     {
         /// <summary>
-        /// Проверка, существует ли объект с заданным id
+        /// Check if a role with a given id exists
         /// </summary>
-        /// <param name="roleId">Id проверяемого объекта</param>
-        /// <returns>True если объект с заданным id существует, false если не существует</returns>
+        /// <param name="roleId">Id of the role to be checked</param>
+        /// <returns>True if the role with the given id exists, false if it does not exist</returns>
         public Task<bool> DoesRoleExistAsync(int roleId);
     }
 }

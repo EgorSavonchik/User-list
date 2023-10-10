@@ -1,4 +1,5 @@
-﻿using UserList.API.DTO;
+﻿using System.Collections.Generic;
+using UserList.API.DTO;
 using UserList.Domain.Entities;
 using UserList.Domain.Models;
 
@@ -7,69 +8,76 @@ namespace UserList.API.Services.UserService
     public interface IUserService
     {
         /// <summary>
-        /// Получение списка всех объектов
+        /// Getting a list of all objects
         /// </summary>
-        /// <param name="pageNo">номер страницы списка</param>
-        /// <param name="pageSize">количество объектов на странице</param>
-        /// <returns></returns>
+        /// <param name="pageNo">List page number</param>
+        /// <param name="pageSize">Number of objects on page</param>
+        /// <param name="parameters">Sampling parameters, contains
+        /// sortBy - field by which sorting will take place
+        /// Ascending - sort order
+        /// filterBy - the field by which the filtering will take place
+        /// folterValue - the value by which the filtering will take place
+        /// roleId - role id for which filtering will be performed
+        /// roleName - role name for which filtering will be performed</param>
+        /// <returns>Page of users with specified sampling parameters</returns>
         public Task<ResponseData<ListModel<User>>> GetUserListAsync(int pageNo = 1, int pageSize = 10, UserFilterParameters? parameters = null);
 
         /// <summary>
-        /// Поиск объекта по Id
+        /// Search for an object by Id
         /// </summary>
-        /// <param name="id">Идентификатор объекта</param>
-        /// <returns></returns>
+        /// <param name="id">Object Identifier</param>
+        /// <returns>User with a specified id</returns>
         public Task<ResponseData<User>> GetUserByIdAsync(int id);
 
         /// <summary>
-        /// Обновление объекта
+        /// Updating an object
         /// </summary>
-        /// <param name="id">Id изменяемомго объекта</param>
-        /// <param name="user">объект с новыми параметрами</param>
-        /// <returns></returns>
+        /// <param name="id">Id of the object to be changed</param>
+        /// <param name="user">Object with new parameters</param>
+        /// <returns>Updated user</returns>
         public Task<ResponseData<User>> UpdateUserAsync(int id, User user);
 
         /// <summary>
-        /// Удаление объекта
+        /// Deleting an object
         /// </summary>
-        /// <param name="id">Id удаляемомго объекта</param>
+        /// <param name="id">Id of the object to be deleted</param>
         /// <returns></returns>
         public Task DeleteUserAsync(int id);
 
         /// <summary>
-        /// Создание объекта
+        /// Object creation
         /// </summary>
-        /// <param name="user">Новый объект</param>
-        /// <returns>Созданный объект</returns>
+        /// <param name="user">New object</param>
+        /// <returns>Created object</returns>
         public Task<ResponseData<User>> CreateUserAsync(User user);
 
         /// <summary>
-        /// Проверка, существует ли объект с заданным id
+        /// Check if an object with the given id exists
         /// </summary>
-        /// <param name="userId">Id проверяемого объекта</param>
-        /// <returns>True если объект с заданным id существует, false если не существует</returns>
+        /// <param name="userId">Id of the inspected object</param>
+        /// <returns>True if the object with the given id exists, false if it does not exist</returns>
         public Task<bool> DoesUserExistAsync(int userId);
 
         /// <summary>
-        /// Добавление роли пользователю с заданным id
+        /// Adding a role to a user with a specified id
         /// </summary>
-        /// <param name="id">Id пользователя</param>
-        /// <param name="role">Добавляемая роль</param>
+        /// <param name="id">User Id</param>
+        /// <param name="role">Added role</param>
         /// <returns></returns>
         public Task AddRoleAsync(int id, Role role);
 
         /// <summary>
-        /// Проверка уникальности поля email
+        /// Checking the uniqueness of the email field
         /// </summary>
-        /// <param name="email">Проверяемый email</param>
-        /// <returns>True если в базе данных нету пользователей с таким же значением поля email, false если есть</returns>
+        /// <param name="email">Verified email</param>
+        /// <returns>True if there are no users with the same email field value in the database, false if there are</returns>
         public Task<bool> IsEmailUnique(string email);
 
         /// <summary>
-        /// получение пользователя по полю email
+        /// Retrieving a user by email field
         /// </summary>
-        /// <param name="email">email пользователя</param>
-        /// <returns>Возращает пользователя с заданным email</returns>
+        /// <param name="email">User email</param>
+        /// <returns>Returns the user with the given email, or null if there is no such user</returns>
         public Task<User?> GetUserByEmail(string email);
     }
 }
